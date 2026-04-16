@@ -1,0 +1,18 @@
+{
+  "name": "Flex-UNO: No Mercy",
+  "short_name": "Flex-UNO",
+  "description": "2-Player Local UNO with +100 and Custom Rules",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#facc15",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
