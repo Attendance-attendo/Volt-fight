@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Yuvan uno </title>
+    <style>
+        :root { --red: #ff5555; --blue: #5555ff; --green: #55aa55; --yellow: #ffaa00; --gold: #facc15; --bg: #0f172a; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; margin: 0; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        /* Menu & Rule Toggles */
+        #menu { text-align: center; width: 90%; max-width: 400px; }
+        .rule-toggle { background: #1e293b; padding: 12px; margin: 5px; border-radius: 10px; display: flex; justify-content: space-between; cursor: pointer; border: 1px solid #334155; }
+        .rule-toggle.active { border-color: var(--gold); background: #334155; }
+
+        /* Game Board */
+        #game { display: none; width: 100%; height: 100%; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
+        .card-display { width: 100px; height: 150px; border-radius: 15px; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; }
+        
+        .hand { display: flex; gap: 8px; overflow-x: auto; width: 100%; padding: 15px; border-top: 1px solid #334155; }
+        .card { width: 70px; height: 105px; border-radius: 8px; border: 2px solid white; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; cursor: pointer; }
+        
+        #overlay { position: fixed; inset: 0; background: #000; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .btn { background: var(--gold); color: #000; border: none; padding: 15px 30px; border-radius: 10px; font-weight: 900; cursor: pointer; margin-top: 10px; width: 100%; }
+        
+        .c-red { background: var(--red); } .c-blue { background: var(--blue); }
+        .c-green { background: var(--green); } .c-yellow { background: var(--yellow); }
+    </style>
+</head>
+<body>
+
+    <div id="menu">
+        <h1 style="color:var(--gold); margin:0;">Flex-UNO</h1>
+        <p style="opacity:0.5;">Custom Rules Edition</p>
+        
+        <div style="margin: 20px 0;">
+            <div id="rule-70" class="rule-toggle" onclick="this.classList.toggle('active')"><span>7-0 Swap/Rotate</span> <span>ON</span></div>
+            <div id="rule-draw" class="rule-toggle" onclick="this.classList.toggle('active')"><span>Draw Until Match</span> <span>ON</span></div>
+            <div id="rule-mercy" class="rule-toggle active" onclick="this.classList.toggle('active')"><span>No Mercy (+100)</span> <span>ON</span></div>
+        </div>
+
+        <button class="btn" onclick="start()">START GAME</button>
+    </div>
+
+    <div id="overlay">
+        <h1 id="pass-msg">PASS TO PLAYER 2</h1>
+        <button class="btn" style="width: auto;" onclick="reveal()">REVEAL HAND</button>
+    </div>
+
+    <div id="game">
+        <div style="opacity: 0.3; text-align: center;">P2 AREA</div>
+        
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <div id="stack-notif" style="color:red; font-weight: 900;"></div>
+            <div id="top-card" class="card-display"></div>
+            <button class="btn" style="width:auto;" onclick="draw()">DRAW CARD</button>
+        </div>
+
+        <div>
+            <div style="color:var(--gold); font-weight: 800; margin-bottom: 5px;" id="turn-label">P1 TURN</div>
+            <div id="player-hand" class="hand"></div>
+        </div>
+    </div>
+
+    <script>
+        let rules = {}, deck = [], discard = null, players = [[], []], turn = 0, stack = 0;
+
+        function start() {
+            rules = {
+                sevenZero: document.getElementById('rule-70').classList.contains('active'),
+                drawUntil: document.getElementById('rule-draw').classList.contains('active'),
+                mercy: document.getElementById('rule-mercy').classList.contains('active')
+            };
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('game').style.display = 'flex';
+            buildDeck();
+            for(let i=0; i<7; i++) { players[0].push(deck.pop()); players[1].push(deck.pop()); }
+            refresh();
+        }
+
+        function buildDeck() {
+            const colors = ['red', 'blue', 'green', 'yellow'];
+            const vals = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'SKIP', 'REV', '+2'];
+            if(rules.mercy) vals.push('+10', '+100');
+            colors.forEach(c => vals.forEach(v => { deck.push({c, v}); deck.push({c, v}); }));
+            deck.sort(() => Math.random() - 0.5);
+            discard = deck.pop();
+        }
+
+        function refresh() {
+            const h = document.getElementById('player-hand'); h.innerHTML = '';
+            players[turn].forEach((card, i) => {
+                const d = document.createElement('div');
+                d.className = `card c-${card.c}`;
+                d.innerText = card.v;
+                d.onclick = () => play(i);
+                h.appendChild(d);
+            });
+            const top = document.getElementById('top-card');
+            top.className = `card-display c-${discard.c}`; top.innerText = discard.v;
+            document.getElementById('stack-notif').innerText = stack > 0 ? `+${stack} STACKED!` : "";
+            document.getElementById('game').style.transform = turn === 1 ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+
+        function play(i) {
+            const card = players[turn][i];
+            if(stack > 0 && !card.v.includes('+')) return alert("Must stack + card!");
+            
+            if(card.c === discard.c || card.v === discard.v) {
+                if(card.v.includes('+')) stack += parseInt(card.v.replace('+', ''));
+                
+                // Rule: 7-0 Hand Swap
+                if(rules.sevenZero && card.v === '0') [players[0], players[1]] = [players[1], players[0]];
+                if(rules.sevenZero && card.v === '7') [players[0], players[1]] = [players[1], players[0]]; // Simple 2-player swap
+
+                discard = card; players[turn].splice(i, 1);
+                if(players[turn].length === 0) { alert(`P${turn+1} WINS!`); location.reload(); }
+                else next();
+            }
+        }
+
+        function draw() {
+            if(stack > 0) {
+                for(let i=0; i<stack; i++) players[turn].push(deck.pop() || deck[0]);
+                stack = 0; next();
+            } else {
+                let card = deck.pop(); players[turn].push(card);
+                if(rules.drawUntil && card.c !== discard.c && card.v !== discard.v) {
+                    // Stay on turn, let them draw again
+                    refresh();
+                } else { next(); }
+            }
+        }
+
+        function next() {
+            turn = (turn === 0) ? 1 : 0;
+            document.getElementById('overlay').style.display = 'flex';
+            document.getElementById('pass-msg').innerText = `PASS TO PLAYER ${turn+1}`;
+        }
+
+        function reveal() { document.getElementById('overlay').style.display = 'none'; refresh(); }
+    </script>
+</body>
+</html>
