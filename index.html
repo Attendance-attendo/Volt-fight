@@ -3,43 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Yuvan uno </title>
+    <title>Flex-UNO</title>
     <style>
         :root { --red: #ff5555; --blue: #5555ff; --green: #55aa55; --yellow: #ffaa00; --gold: #facc15; --bg: #0f172a; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; margin: 0; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         
-        /* Menu & Rule Toggles */
+        /* Menu */
         #menu { text-align: center; width: 90%; max-width: 400px; }
-        .rule-toggle { background: #1e293b; padding: 12px; margin: 5px; border-radius: 10px; display: flex; justify-content: space-between; cursor: pointer; border: 1px solid #334155; }
-        .rule-toggle.active { border-color: var(--gold); background: #334155; }
+        .mode-btn { background: #1e293b; padding: 20px; border-radius: 20px; border: 2px solid #334155; margin: 10px; cursor: pointer; transition: 0.2s; width: 100%; box-sizing: border-box; }
+        .mode-btn:hover { border-color: var(--gold); transform: translateY(-3px); }
 
-        /* Game Board */
+        /* Game UI */
         #game { display: none; width: 100%; height: 100%; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
-        .card-display { width: 100px; height: 150px; border-radius: 15px; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; }
         
-        .hand { display: flex; gap: 8px; overflow-x: auto; width: 100%; padding: 15px; border-top: 1px solid #334155; }
+        .discard-area { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .card-display { width: 100px; height: 150px; border-radius: 12px; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; }
+        .card-display.skull { border-color: red; } /* Style for Attack card */
+
+        .hand { display: flex; gap: 8px; overflow-x: auto; width: 100%; padding: 15px; border-top: 1px solid #334155; min-height: 120px; }
         .card { width: 70px; height: 105px; border-radius: 8px; border: 2px solid white; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; cursor: pointer; }
         
-        #overlay { position: fixed; inset: 0; background: #000; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .btn { background: var(--gold); color: #000; border: none; padding: 15px 30px; border-radius: 10px; font-weight: 900; cursor: pointer; margin-top: 10px; width: 100%; }
-        
+        /* Special Overlays */
+        #overlay { position: fixed; inset: 0; background: #000; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        .btn { background: var(--gold); color: #000; border: none; padding: 15px 30px; border-radius: 10px; font-weight: 900; cursor: pointer; margin-top: 20px; text-transform: uppercase; }
+
         .c-red { background: var(--red); } .c-blue { background: var(--blue); }
         .c-green { background: var(--green); } .c-yellow { background: var(--yellow); }
+        .c-black { background: #000; color: white; } /* Wild/Attack cards */
     </style>
 </head>
 <body>
 
     <div id="menu">
-        <h1 style="color:var(--gold); margin:0;">Flex-UNO</h1>
-        <p style="opacity:0.5;">Custom Rules Edition</p>
-        
-        <div style="margin: 20px 0;">
-            <div id="rule-70" class="rule-toggle" onclick="this.classList.toggle('active')"><span>7-0 Swap/Rotate</span> <span>ON</span></div>
-            <div id="rule-draw" class="rule-toggle" onclick="this.classList.toggle('active')"><span>Draw Until Match</span> <span>ON</span></div>
-            <div id="rule-mercy" class="rule-toggle active" onclick="this.classList.toggle('active')"><span>No Mercy (+100)</span> <span>ON</span></div>
+        <h1 style="color:var(--gold); font-size: 3rem; margin-bottom: 5px;">Flex-UNO</h1>
+        <p style="opacity:0.6; margin-bottom: 30px;">1 Phone • 2 Players • Reference Card</p>
+        <div class="mode-btn" onclick="start('classic')">
+            <h2 style="color:var(--blue); margin: 0 0 5px 0;">UNO CLASSIC</h2>
+            <p style="font-size: 12px; margin: 0; opacity:0.8;">Standard rules, reference cards, chill vibes.</p>
         </div>
-
-        <button class="btn" onclick="start()">START GAME</button>
+        <div class="mode-btn" onclick="start('mercy')">
+            <h2 style="color:var(--red); margin: 0 0 5px 0;">NO MERCY</h2>
+            <p style="font-size: 12px; margin: 0; opacity:0.8;">Adds the +4 ATTACK skull card! Mandatory stacking.</p>
+        </div>
     </div>
 
     <div id="overlay">
@@ -48,88 +53,145 @@
     </div>
 
     <div id="game">
-        <div style="opacity: 0.3; text-align: center;">P2 AREA</div>
+        <div id="p2-area" style="opacity: 0.2; text-align: center;">OPPONENT AREA</div>
         
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <div id="stack-notif" style="color:red; font-weight: 900;"></div>
+        <div class="discard-area">
+            <div id="stack-notif" style="color:#ff4444; font-weight: 900; height: 25px;"></div>
             <div id="top-card" class="card-display"></div>
-            <button class="btn" style="width:auto;" onclick="draw()">DRAW CARD</button>
+            <button class="btn" style="margin:0; font-size: 12px; width:auto;" onclick="draw()">DRAW CARD</button>
         </div>
 
         <div>
-            <div style="color:var(--gold); font-weight: 800; margin-bottom: 5px;" id="turn-label">P1 TURN</div>
+            <div style="color:var(--gold); font-weight: 800; margin-bottom: 5px;" id="turn-txt">PLAYER 1 HAND</div>
             <div id="player-hand" class="hand"></div>
         </div>
     </div>
 
     <script>
-        let rules = {}, deck = [], discard = null, players = [[], []], turn = 0, stack = 0;
+        let gameMode = 'classic';
+        let deck = [], discard = null, players = [[], []], turn = 0, stack = 0;
 
-        function start() {
-            rules = {
-                sevenZero: document.getElementById('rule-70').classList.contains('active'),
-                drawUntil: document.getElementById('rule-draw').classList.contains('active'),
-                mercy: document.getElementById('rule-mercy').classList.contains('active')
-            };
+        function start(m) {
+            gameMode = m;
             document.getElementById('menu').style.display = 'none';
             document.getElementById('game').style.display = 'flex';
-            buildDeck();
-            for(let i=0; i<7; i++) { players[0].push(deck.pop()); players[1].push(deck.pop()); }
+            setupDeck();
+            deal();
             refresh();
         }
 
-        function buildDeck() {
+        // --- DECK SETUP (BASED ON REFERENCE IMAGES) ---
+        function setupDeck() {
             const colors = ['red', 'blue', 'green', 'yellow'];
-            const vals = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'SKIP', 'REV', '+2'];
-            if(rules.mercy) vals.push('+10', '+100');
-            colors.forEach(c => vals.forEach(v => { deck.push({c, v}); deck.push({c, v}); }));
+            
+            // Numerical 0-9 cards (Matches image top row)
+            colors.forEach(c => {
+                // One '0' card per color
+                deck.push({ c, v: '0', type: 'num' });
+                // Two of each 1-9 per color
+                for(let i=1; i<=9; i++) {
+                    deck.push({ c, v: i.toString(), type: 'num' });
+                    deck.push({ c, v: i.toString(), type: 'num' });
+                }
+            });
+
+            // Action Cards (Matches image second row)
+            colors.forEach(c => {
+                deck.push({ c, v: 'SKIP', type: 'act' }); deck.push({ c, v: 'SKIP', type: 'act' });
+                deck.push({ c, v: 'REV',  type: 'act' }); deck.push({ c, v: 'REV',  type: 'act' });
+                deck.push({ c, v: '+2',   type: 'stack' }); deck.push({ c, v: '+2',   type: 'stack' });
+            });
+
+            // Wild Cards (Matches image wildcard examples)
+            for(let i=0; i<4; i++) {
+                // Default Wild (Color match)
+                deck.push({ c: 'black', v: 'WILD', type: 'act' });
+                // Default +4 Draw Wild
+                deck.push({ c: 'black', v: '+4', type: 'stack' });
+            }
+
+            // NO MERCY CARD: +4 ATTACK! (skull card from reference bottom)
+            if(gameMode === 'mercy') {
+                for(let i=0; i<2; i++) { // Add two to the deck
+                    deck.push({ c: 'black', v: '+4 ATTACK!', type: 'stack', special: 'skull' });
+                }
+            }
+
             deck.sort(() => Math.random() - 0.5);
             discard = deck.pop();
+        }
+
+        function deal() {
+            for(let i=0; i<7; i++) {
+                players[0].push(deck.pop());
+                players[1].push(deck.pop());
+            }
         }
 
         function refresh() {
             const h = document.getElementById('player-hand'); h.innerHTML = '';
             players[turn].forEach((card, i) => {
                 const d = document.createElement('div');
-                d.className = `card c-${card.c}`;
-                d.innerText = card.v;
+                const isAttack = card.special === 'skull';
+                d.className = `card c-${card.c} ${isAttack ? 'skull' : ''}`;
+                
+                // Attack Card needs specific styling
+                if (isAttack) {
+                    d.innerHTML = `<span style="color:#ffaa00; font-size:10px;">+4</span><br><span style="color:#facc15; font-size:8px;">ATTACK!</span>`;
+                } else {
+                    d.innerText = card.v;
+                }
                 d.onclick = () => play(i);
                 h.appendChild(d);
             });
+
             const top = document.getElementById('top-card');
-            top.className = `card-display c-${discard.c}`; top.innerText = discard.v;
-            document.getElementById('stack-notif').innerText = stack > 0 ? `+${stack} STACKED!` : "";
+            top.className = `card-display c-${discard.c} ${discard.special === 'skull' ? 'skull' : ''}`;
+            if (discard.special === 'skull') {
+                top.innerHTML = `<span style="font-size:32px;">💀</span><br><span style="color:#facc15; font-size:12px;">+4 ATTACK!</span>`;
+            } else {
+                top.innerText = discard.v; top.innerHTML = top.innerText; // Reset innerHTML
+            }
+            
+            document.getElementById('stack-notif').innerText = stack > 0 ? `STACKED: +${stack}` : "";
+            document.getElementById('turn-txt').innerText = `PLAYER ${turn+1} HAND`;
             document.getElementById('game').style.transform = turn === 1 ? 'rotate(180deg)' : 'rotate(0deg)';
         }
 
         function play(i) {
             const card = players[turn][i];
-            if(stack > 0 && !card.v.includes('+')) return alert("Must stack + card!");
             
-            if(card.c === discard.c || card.v === discard.v) {
-                if(card.v.includes('+')) stack += parseInt(card.v.replace('+', ''));
-                
-                // Rule: 7-0 Hand Swap
-                if(rules.sevenZero && card.v === '0') [players[0], players[1]] = [players[1], players[0]];
-                if(rules.sevenZero && card.v === '7') [players[0], players[1]] = [players[1], players[0]]; // Simple 2-player swap
+            // Stacking rule validation
+            if (stack > 0 && card.type !== 'stack') return alert("Must play a + card to stack or draw!");
 
+            // Play logic: Match color, match value, or special wildcard
+            if (card.c === discard.c || card.v === discard.v || card.c === 'black') {
+                
+                // Handle wild card color choice (Simple implementation)
+                if (card.c === 'black') {
+                    const color = prompt("Choose color (red, blue, green, yellow):", "red");
+                    card.c = color || 'red';
+                }
+
+                if (card.type === 'stack') {
+                    // Stacking rules (Matches reference +4 draw and +4 attack cards)
+                    const value = parseInt(card.v.match(/\d+/)[0]); // Find the number (2, 4, etc.)
+                    stack += value;
+                }
+                
                 discard = card; players[turn].splice(i, 1);
-                if(players[turn].length === 0) { alert(`P${turn+1} WINS!`); location.reload(); }
-                else next();
+                if (players[turn].length === 0) {
+                    alert(`PLAYER ${turn+1} WINS!`); location.reload();
+                } else { next(); }
+            } else {
+                alert("Card doesn't match!");
             }
         }
 
         function draw() {
-            if(stack > 0) {
-                for(let i=0; i<stack; i++) players[turn].push(deck.pop() || deck[0]);
-                stack = 0; next();
-            } else {
-                let card = deck.pop(); players[turn].push(card);
-                if(rules.drawUntil && card.c !== discard.c && card.v !== discard.v) {
-                    // Stay on turn, let them draw again
-                    refresh();
-                } else { next(); }
-            }
+            const count = stack > 0 ? stack : 1;
+            for(let i=0; i<count; i++) players[turn].push(deck.pop() || (setupDeck(), deck.pop())); // Build new deck if empty
+            stack = 0; next();
         }
 
         function next() {
