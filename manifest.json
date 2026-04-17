@@ -1,7 +1,7 @@
 {
-  "name": "Flex-UNO: No Mercy",
-  "short_name": "Flex-UNO",
-  "description": "2-Player Local UNO with +100 and Custom Rules",
+  "name": "VOLT FIGHT",
+  "short_name": "VOLT GIGHT",
+  "description": "2-Player Local Game",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#0f172a",
