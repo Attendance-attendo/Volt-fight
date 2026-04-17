@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VOLT-FIGHT</title>
+    <style>
+        :root { --p1: #3b82f6; --p2: #ef4444; --gold: #facc15; --bg: #000; }
+        * { box-sizing: border-box; touch-action: none; user-select: none; }
+        body { font-family: 'Arial Black', sans-serif; background: var(--bg); margin: 0; overflow: hidden; height: 100vh; color: white; }
+
+        /* Menu with your Logo */
+        #menu { 
+            position: fixed; inset: 0; z-index: 100; background: var(--bg);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #menu img { width: 80%; max-width: 400px; border-radius: 20px; box-shadow: 0 0 50px rgba(250, 204, 21, 0.3); }
+        
+        .btn { 
+            margin-top: 30px; padding: 15px 40px; background: var(--gold); 
+            color: black; border: none; border-radius: 50px; font-weight: 900; 
+            font-size: 20px; cursor: pointer; text-transform: uppercase;
+        }
+
+        #arena { display: none; width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+        
+        .goal { position: absolute; width: 100%; height: 80px; display: flex; align-items: center; justify-content: center; font-size: 10px; opacity: 0.3; }
+        #goal-p2 { top: 0; background: linear-gradient(to bottom, var(--p2), transparent); }
+        #goal-p1 { bottom: 0; background: linear-gradient(to top, var(--p1), transparent); }
+
+        #core { 
+            position: absolute; width: 60px; height: 60px; background: #fff; 
+            border-radius: 50%; box-shadow: 0 0 40px var(--gold);
+            left: calc(50% - 30px); top: calc(50% - 30px); z-index: 10;
+        }
+
+        .score { position: absolute; left: 20px; font-size: 40px; opacity: 0.2; font-style: italic; }
+        #score-p2 { top: 120px; transform: rotate(180deg); color: var(--p2); }
+        #score-p1 { bottom: 120px; color: var(--p1); }
+    </style>
+</head>
+<body>
+
+    <div id="menu">
+        <img src="Logo.png" alt="Volt Fight Logo">
+        <button class="btn" onclick="startGame()">Start Battle</button>
+    </div>
+
+    <div id="arena">
+        <div id="goal-p2" class="goal">PLAYER 2 DEFEND</div>
+        <div id="score-p2" class="score">0</div>
+        
+        <div id="core"></div>
+        
+        <div id="score-p1" class="score">0</div>
+        <div id="goal-p1" class="goal">PLAYER 1 DEFEND</div>
+    </div>
+
+    <script>
+        const core = document.getElementById('core');
+        const arena = document.getElementById('arena');
+        let pos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        let vel = { x: 0, y: 0 };
+        let scores = { p1: 0, p2: 0 };
+        const friction = 0.97;
+
+        function startGame() {
+            document.getElementById('menu').style.display = 'none';
+            arena.style.display = 'block';
+            update();
+        }
+
+        // Handle Blasts and Suction
+        window.addEventListener('touchstart', e => {
+            Array.from(e.changedTouches).forEach(t => applyPhysics(t.clientX, t.clientY, true));
+        });
+
+        window.addEventListener('touchmove', e => {
+            Array.from(e.changedTouches).forEach(t => applyPhysics(t.clientX, t.clientY, false));
+        });
+
+        function applyPhysics(tx, ty, isBlast) {
+            const dx = pos.x - tx;
+            const dy = pos.y - ty;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if(dist < 200) {
+                const force = isBlast ? 15 : 0.8;
+                // Blast pushes away, Move pulls toward (Suction)
+                const direction = isBlast ? 1 : -1;
+                vel.x += (dx / dist) * force * direction;
+                vel.y += (dy / dist) * force * direction;
+            }
+        }
+
+        function update() {
+            pos.x += vel.x;
+            pos.y += vel.y;
+            vel.x *= friction;
+            vel.y *= friction;
+
+            // Bounce X
+            if(pos.x < 30 || pos.x > window.innerWidth - 30) {
+                vel.x *= -1;
+                pos.x = pos.x < 30 ? 30 : window.innerWidth - 30;
+            }
+
+            // Score Check
+            if(pos.y < -30) { scores.p1++; reset(); }
+            else if(pos.y > window.innerHeight + 30) { scores.p2++; reset(); }
+
+            core.style.left = `${pos.x - 30}px`;
+            core.style.top = `${pos.y - 30}px`;
+            
+            document.getElementById('score-p1').innerText = scores.p1;
+            document.getElementById('score-p2').innerText = scores.p2;
+
+            requestAnimationFrame(update);
+        }
+
+        function reset() {
+            pos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+            vel = { x: 0, y: 0 };
+        }
+    </script>
+</body>
+</html>
