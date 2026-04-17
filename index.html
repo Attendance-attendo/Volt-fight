@@ -3,204 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flex-UNO</title>
+    <title>VOLT-FIGHT</title>
     <style>
-        :root { --red: #ff5555; --blue: #5555ff; --green: #55aa55; --yellow: #ffaa00; --gold: #facc15; --bg: #0f172a; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        
-        /* Menu */
-        #menu { text-align: center; width: 90%; max-width: 400px; }
-        .mode-btn { background: #1e293b; padding: 20px; border-radius: 20px; border: 2px solid #334155; margin: 10px; cursor: pointer; transition: 0.2s; width: 100%; box-sizing: border-box; }
-        .mode-btn:hover { border-color: var(--gold); transform: translateY(-3px); }
+        :root { --p1: #3b82f6; --p2: #ef4444; --gold: #facc15; --bg: #0f172a; }
+        * { box-sizing: border-box; touch-action: none; user-select: none; }
+        body { font-family: 'Arial Black', sans-serif; background: var(--bg); margin: 0; overflow: hidden; height: 100vh; color: white; }
 
-        /* Game UI */
-        #game { display: none; width: 100%; height: 100%; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
+        #arena { width: 100vw; height: 100vh; position: relative; overflow: hidden; border: 4px solid #1e293b; }
         
-        .discard-area { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .card-display { width: 100px; height: 150px; border-radius: 12px; border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; }
-        .card-display.skull { border-color: red; } /* Style for Attack card */
+        /* Goal Zones */
+        .goal { position: absolute; width: 100%; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 12px; opacity: 0.5; }
+        #goal-p2 { top: 0; background: linear-gradient(to bottom, var(--p2), transparent); color: white; }
+        #goal-p1 { bottom: 0; background: linear-gradient(to top, var(--p1), transparent); color: white; }
 
-        .hand { display: flex; gap: 8px; overflow-x: auto; width: 100%; padding: 15px; border-top: 1px solid #334155; min-height: 120px; }
-        .card { width: 70px; height: 105px; border-radius: 8px; border: 2px solid white; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; cursor: pointer; }
-        
-        /* Special Overlays */
-        #overlay { position: fixed; inset: 0; background: #000; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        .btn { background: var(--gold); color: #000; border: none; padding: 15px 30px; border-radius: 10px; font-weight: 900; cursor: pointer; margin-top: 20px; text-transform: uppercase; }
+        /* The Core */
+        #core { 
+            position: absolute; width: 50px; height: 50px; background: var(--gold); 
+            border-radius: 50%; box-shadow: 0 0 30px var(--gold);
+            left: calc(50% - 25px); top: calc(50% - 25px);
+            transition: transform 0.05s linear; z-index: 10;
+        }
 
-        .c-red { background: var(--red); } .c-blue { background: var(--blue); }
-        .c-green { background: var(--green); } .c-yellow { background: var(--yellow); }
-        .c-black { background: #000; color: white; } /* Wild/Attack cards */
+        .score { position: absolute; left: 10px; font-size: 24px; opacity: 0.2; transform: rotate(90deg); }
+        #score-p2 { top: 100px; } #score-p1 { bottom: 100px; }
+
+        .vfx { position: absolute; border-radius: 50%; background: white; pointer-events: none; opacity: 0.5; transform: scale(0); animation: pulse 0.3s ease-out; }
+        @keyframes pulse { to { transform: scale(3); opacity: 0; } }
     </style>
 </head>
 <body>
 
-    <div id="menu">
-        <h1 style="color:var(--gold); font-size: 3rem; margin-bottom: 5px;">Flex-UNO</h1>
-        <p style="opacity:0.6; margin-bottom: 30px;">1 Phone • 2 Players • Reference Card</p>
-        <div class="mode-btn" onclick="start('classic')">
-            <h2 style="color:var(--blue); margin: 0 0 5px 0;">UNO CLASSIC</h2>
-            <p style="font-size: 12px; margin: 0; opacity:0.8;">Standard rules, reference cards, chill vibes.</p>
-        </div>
-        <div class="mode-btn" onclick="start('mercy')">
-            <h2 style="color:var(--red); margin: 0 0 5px 0;">NO MERCY</h2>
-            <p style="font-size: 12px; margin: 0; opacity:0.8;">Adds the +4 ATTACK skull card! Mandatory stacking.</p>
-        </div>
-    </div>
-
-    <div id="overlay">
-        <h1 id="pass-msg">PASS TO PLAYER 2</h1>
-        <button class="btn" style="width: auto;" onclick="reveal()">REVEAL HAND</button>
-    </div>
-
-    <div id="game">
-        <div id="p2-area" style="opacity: 0.2; text-align: center;">OPPONENT AREA</div>
+    <div id="arena">
+        <div id="goal-p2" class="goal">PLAYER 2 DEAD ZONE</div>
+        <div id="score-p2" class="score">0</div>
         
-        <div class="discard-area">
-            <div id="stack-notif" style="color:#ff4444; font-weight: 900; height: 25px;"></div>
-            <div id="top-card" class="card-display"></div>
-            <button class="btn" style="margin:0; font-size: 12px; width:auto;" onclick="draw()">DRAW CARD</button>
-        </div>
-
-        <div>
-            <div style="color:var(--gold); font-weight: 800; margin-bottom: 5px;" id="turn-txt">PLAYER 1 HAND</div>
-            <div id="player-hand" class="hand"></div>
-        </div>
+        <div id="core"></div>
+        
+        <div id="score-p1" class="score">0</div>
+        <div id="goal-p1" class="goal">PLAYER 1 DEAD ZONE</div>
     </div>
 
     <script>
-        let gameMode = 'classic';
-        let deck = [], discard = null, players = [[], []], turn = 0, stack = 0;
+        const core = document.getElementById('core');
+        const arena = document.getElementById('arena');
+        let pos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        let vel = { x: 0, y: 0 };
+        let scores = { p1: 0, p2: 0 };
+        const friction = 0.98;
+        const speedLimit = 15;
 
-        function start(m) {
-            gameMode = m;
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('game').style.display = 'flex';
-            setupDeck();
-            deal();
-            refresh();
-        }
+        // Multi-touch tracking
+        let touches = {};
 
-        // --- DECK SETUP (BASED ON REFERENCE IMAGES) ---
-        function setupDeck() {
-            const colors = ['red', 'blue', 'green', 'yellow'];
-            
-            // Numerical 0-9 cards (Matches image top row)
-            colors.forEach(c => {
-                // One '0' card per color
-                deck.push({ c, v: '0', type: 'num' });
-                // Two of each 1-9 per color
-                for(let i=1; i<=9; i++) {
-                    deck.push({ c, v: i.toString(), type: 'num' });
-                    deck.push({ c, v: i.toString(), type: 'num' });
-                }
+        window.addEventListener('touchstart', e => {
+            Array.from(e.changedTouches).forEach(t => {
+                touches[t.identifier] = { x: t.clientX, y: t.clientY };
+                createVFX(t.clientX, t.clientY);
+                applyBlast(t.clientX, t.clientY);
             });
+        });
 
-            // Action Cards (Matches image second row)
-            colors.forEach(c => {
-                deck.push({ c, v: 'SKIP', type: 'act' }); deck.push({ c, v: 'SKIP', type: 'act' });
-                deck.push({ c, v: 'REV',  type: 'act' }); deck.push({ c, v: 'REV',  type: 'act' });
-                deck.push({ c, v: '+2',   type: 'stack' }); deck.push({ c, v: '+2',   type: 'stack' });
+        window.addEventListener('touchmove', e => {
+            Array.from(e.changedTouches).forEach(t => {
+                touches[t.identifier] = { x: t.clientX, y: t.clientY };
+                applySuction(t.clientX, t.clientY);
             });
+        });
 
-            // Wild Cards (Matches image wildcard examples)
-            for(let i=0; i<4; i++) {
-                // Default Wild (Color match)
-                deck.push({ c: 'black', v: 'WILD', type: 'act' });
-                // Default +4 Draw Wild
-                deck.push({ c: 'black', v: '+4', type: 'stack' });
-            }
+        window.addEventListener('touchend', e => {
+            Array.from(e.changedTouches).forEach(t => delete touches[t.identifier]);
+        });
 
-            // NO MERCY CARD: +4 ATTACK! (skull card from reference bottom)
-            if(gameMode === 'mercy') {
-                for(let i=0; i<2; i++) { // Add two to the deck
-                    deck.push({ c: 'black', v: '+4 ATTACK!', type: 'stack', special: 'skull' });
-                }
-            }
-
-            deck.sort(() => Math.random() - 0.5);
-            discard = deck.pop();
-        }
-
-        function deal() {
-            for(let i=0; i<7; i++) {
-                players[0].push(deck.pop());
-                players[1].push(deck.pop());
+        function applyBlast(tx, ty) {
+            const dx = pos.x - tx;
+            const dy = pos.y - ty;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if(dist < 150) {
+                vel.x += (dx / dist) * 10;
+                vel.y += (dy / dist) * 10;
             }
         }
 
-        function refresh() {
-            const h = document.getElementById('player-hand'); h.innerHTML = '';
-            players[turn].forEach((card, i) => {
-                const d = document.createElement('div');
-                const isAttack = card.special === 'skull';
-                d.className = `card c-${card.c} ${isAttack ? 'skull' : ''}`;
-                
-                // Attack Card needs specific styling
-                if (isAttack) {
-                    d.innerHTML = `<span style="color:#ffaa00; font-size:10px;">+4</span><br><span style="color:#facc15; font-size:8px;">ATTACK!</span>`;
-                } else {
-                    d.innerText = card.v;
-                }
-                d.onclick = () => play(i);
-                h.appendChild(d);
-            });
-
-            const top = document.getElementById('top-card');
-            top.className = `card-display c-${discard.c} ${discard.special === 'skull' ? 'skull' : ''}`;
-            if (discard.special === 'skull') {
-                top.innerHTML = `<span style="font-size:32px;">💀</span><br><span style="color:#facc15; font-size:12px;">+4 ATTACK!</span>`;
-            } else {
-                top.innerText = discard.v; top.innerHTML = top.innerText; // Reset innerHTML
-            }
-            
-            document.getElementById('stack-notif').innerText = stack > 0 ? `STACKED: +${stack}` : "";
-            document.getElementById('turn-txt').innerText = `PLAYER ${turn+1} HAND`;
-            document.getElementById('game').style.transform = turn === 1 ? 'rotate(180deg)' : 'rotate(0deg)';
-        }
-
-        function play(i) {
-            const card = players[turn][i];
-            
-            // Stacking rule validation
-            if (stack > 0 && card.type !== 'stack') return alert("Must play a + card to stack or draw!");
-
-            // Play logic: Match color, match value, or special wildcard
-            if (card.c === discard.c || card.v === discard.v || card.c === 'black') {
-                
-                // Handle wild card color choice (Simple implementation)
-                if (card.c === 'black') {
-                    const color = prompt("Choose color (red, blue, green, yellow):", "red");
-                    card.c = color || 'red';
-                }
-
-                if (card.type === 'stack') {
-                    // Stacking rules (Matches reference +4 draw and +4 attack cards)
-                    const value = parseInt(card.v.match(/\d+/)[0]); // Find the number (2, 4, etc.)
-                    stack += value;
-                }
-                
-                discard = card; players[turn].splice(i, 1);
-                if (players[turn].length === 0) {
-                    alert(`PLAYER ${turn+1} WINS!`); location.reload();
-                } else { next(); }
-            } else {
-                alert("Card doesn't match!");
+        function applySuction(tx, ty) {
+            const dx = tx - pos.x;
+            const dy = ty - pos.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if(dist < 200) {
+                vel.x += (dx / dist) * 0.5;
+                vel.y += (dy / dist) * 0.5;
             }
         }
 
-        function draw() {
-            const count = stack > 0 ? stack : 1;
-            for(let i=0; i<count; i++) players[turn].push(deck.pop() || (setupDeck(), deck.pop())); // Build new deck if empty
-            stack = 0; next();
+        function createVFX(x, y) {
+            const v = document.createElement('div');
+            v.className = 'vfx';
+            v.style.left = x + 'px';
+            v.style.top = y + 'px';
+            v.style.width = '20px'; v.style.height = '20px';
+            arena.appendChild(v);
+            setTimeout(() => v.remove(), 300);
         }
 
-        function next() {
-            turn = (turn === 0) ? 1 : 0;
-            document.getElementById('overlay').style.display = 'flex';
-            document.getElementById('pass-msg').innerText = `PASS TO PLAYER ${turn+1}`;
+        function update() {
+            // Physics
+            pos.x += vel.x;
+            pos.y += vel.y;
+            vel.x *= friction;
+            vel.y *= friction;
+
+            // Bounce off walls
+            if(pos.x < 25 || pos.x > window.innerWidth - 25) {
+                vel.x *= -1;
+                pos.x = pos.x < 25 ? 25 : window.innerWidth - 25;
+            }
+
+            // Scoring
+            if(pos.y < 0) { // P1 Scores
+                scores.p1++;
+                resetCore();
+            } else if(pos.y > window.innerHeight) { // P2 Scores
+                scores.p2++;
+                resetCore();
+            }
+
+            // Update UI
+            core.style.transform = `translate(${pos.x - (window.innerWidth/2)}px, ${pos.y - (window.innerHeight/2)}px)`;
+            document.getElementById('score-p1').innerText = scores.p1;
+            document.getElementById('score-p2').innerText = scores.p2;
+
+            requestAnimationFrame(update);
         }
 
-        function reveal() { document.getElementById('overlay').style.display = 'none'; refresh(); }
+        function resetCore() {
+            pos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+            vel = { x: 0, y: 0 };
+            core.style.background = 'white';
+            setTimeout(() => core.style.background = 'var(--gold)', 500);
+        }
+
+        update();
     </script>
 </body>
 </html>
